@@ -3,7 +3,7 @@ import threading
 
 HEADER = 64
 PORT = 5050
-SERVER = socket.gethostbyname(socket.gethostname())
+SERVER = "192.168.0.226"
 ADDR = (SERVER, PORT)
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 FORMAT = 'utf-8'
@@ -16,11 +16,12 @@ def handle_client(conn, addr):
     message_list = []
     print(f"[New Connection] {addr}")
     mail = message_list
-    mailman = threading.Thread(target=mailmain, args=(mail, conn, addr))
-    mailman.start()
+    #mailman = threading.Thread(target=mailmain, args=(mail, conn, addr))
+    #mailman.start()
     connected = True
     client_name = socket.gethostbyaddr(addr[0])[0]  
     while connected:
+        mailmain(message_list, conn, addr)
         msg_length = conn.recv(HEADER).decode(FORMAT)
         if msg_length:
             msg_length = int(msg_length)
@@ -28,9 +29,15 @@ def handle_client(conn, addr):
             if msg == DISCONNECT_MESSAGE:
                 connected = False
                 message_list = []
-            print(f"[{addr}] {msg}")
-            message_list.append(f"[{client_name}] {msg}")
-        mailmain(message_list, conn, addr)
+                msg = f"[{client_name}] {msg}"
+                msg_length = len(msg)
+                msg_length = str(msg_length).encode(FORMAT)
+                msg_length += b' ' * (HEADER - len(msg_length))
+                conn.send(msg_length)
+                conn.send(msg.encode(FORMAT))
+            else:
+                print(f"[{addr}] {msg}")
+                message_list.append(f"[{client_name}] {msg}")
                 
 
 def mailmain(mail, conn, addr):

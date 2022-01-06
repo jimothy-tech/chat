@@ -13,7 +13,7 @@ client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 connected = True
 Client_name = socket.gethostbyaddr(SERVER)[0]
 client.connect(ADDR)
-
+nickname = ""
 
 def send(msg):
     message = msg.encode(FORMAT)
@@ -28,7 +28,6 @@ def inputmsg():
     print(f"[Client name] {Client_name}")
     global connected
     while connected:
-        time.sleep(.5)
         parcel = input("Message:") 
         if parcel == "exit":
             connected = False
@@ -40,25 +39,32 @@ def display_messages():
     print("display_messages thread running...")
     new_messages = []
     while True:
-        message_list_length = int(client.recv(HEADER).decode(FORMAT))
-        if message_list_length:
-            msg = client.recv(message_list_length).decode(FORMAT)
-            if msg != f"[{Client_name}] CyaHoe":
+        message = int(client.recv(HEADER).decode(FORMAT))
+        if message:
+            msg = client.recv(message).decode(FORMAT)
+            if msg != f"[{nickname}] CyaHoe":
                 new_messages.append(msg)
                 print(msg)
             else:
-                pass
-            if msg == f"[{Client_name}] CyaHoe":
                 print("display_messages thread stopped!")
                 break
-        #for message in new_messages:
-            #try:
-                #if message != messages[new_messages.index(message)]:
-                    #pass
-            #except IndexError:
-                #print(message)
-                #messages.append(message)
         
+def msg_send_handling(msg, client):
+    length = msg.encode(FORMAT) + b' ' * (HEADER - len(msg.encode(FORMAT)))
+    client.send(length)
+    client.send(msg.encode(FORMAT))
+
+def msg_recieve_handling():
+    length = int(client.recv(HEADER).decode(FORMAT))
+    if length:
+        return client.recv(length)
+
+def choose_nickname():
+    global nickname
+    nick_question = msg_recieve_handling().decode(FORMAT)
+    nickname = input(f"{nick_question}/n Nickname:")
+
+choose_nickname()
 thread = threading.Thread(target=display_messages)
 thread.start() 
 inputmsg()

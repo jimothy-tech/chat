@@ -1,5 +1,6 @@
 import socket 
 import threading
+import time
 
 HEADER = 64
 PORT = 5050
@@ -9,55 +10,59 @@ server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "CyaHoe"
 server.bind(ADDR)
+clients = []
+nicknames = []
 
-message_list = []
-def handle_client(conn, addr):
-    global message_list
-    message_list = []
+def handle_client(client, addr):
     print(f"[New Connection] {addr}")
-    mail = message_list
-    #mailman = threading.Thread(target=mailmain, args=(mail, conn, addr))
-    #mailman.start()
     connected = True
     client_name = socket.gethostbyaddr(addr[0])[0]  
     while connected:
-        mailmain(message_list, conn, addr)
-        msg_length = conn.recv(HEADER).decode(FORMAT)
-        if msg_length:
-            msg_length = int(msg_length)
-            msg = conn.recv(msg_length).decode(FORMAT)
-            if msg == DISCONNECT_MESSAGE:
-                connected = False
-                message_list = []
-                msg = f"[{client_name}] {msg}"
-                msg_length = len(msg)
-                msg_length = str(msg_length).encode(FORMAT)
-                msg_length += b' ' * (HEADER - len(msg_length))
-                conn.send(msg_length)
-                conn.send(msg.encode(FORMAT))
-            else:
-                print(f"[{addr}] {msg}")
-                message_list.append(f"[{client_name}] {msg}")
+        msg = msg_recieve_handling(client)
+        mailman(f"[{nicknames[clients.index(client)]}] {msg}")
+        msg.decode(FORMAT)
+        if msg == DISCONNECT_MESSAGE:
+            connected = False 
+            msg = f"[{nicknames[clients.index(client)]}] {msg}"
+            msg_send_handling(msg, client)
+        else:
+            print(f"[{nicknames[clients.index(client)]}] {msg}")
                 
-
-def mailmain(mail, conn, addr):
-    for messages in mail:
-        print(messages)
-        message = messages.encode(FORMAT)
-        msg_length = len(message)
+def mailman(mail):
+    for client in clients:
+        #message = messages.encode(FORMAT)
+        msg_length = len(mail)
         send_length = str(msg_length).encode(FORMAT)
         send_length += b' ' * (HEADER - len(send_length))
-        conn.send(send_length)
-        conn.send(message)
-
+        client.send(send_length)
+        client.send(mail)
 
 def start():
     server.listen()
     print(f"[Listening] Server is listening on {SERVER}")
     while True:
-        conn, addr = server.accept()
-        thread = threading.Thread(target=handle_client, args=(conn, addr))
+        client, addr = server.accept()
+        clients.append(client)
+        time.sleep(1)
+        msg_send_handling("What would you like your nickname to be?", client)
+        nicknames.append(msg_recieve_handling(client).decode(FORMAT))
+        thread = threading.Thread(target=handle_client, args=(client, addr))
         thread.start()
         print(f"[Active Connections] {threading.activeCount() - 1}")
-print("socket server is starting...")
+
+def msg_send_handling(msg, client):
+    length = msg.encode(FORMAT) + b' ' * (HEADER - len(msg.encode(FORMAT)))
+    client.send(length)
+    client.send(msg.encode(FORMAT))
+
+def msg_recieve_handling(client):
+    length = int(client.recv(HEADER).decode(FORMAT))
+    if length:
+        return client.recv(length)
+
+#msg_send_handling_thread = threading.Thread(target=msg_send_handling)
+#msg_recieve_handling_thread = threading.Thread(target=msg_recieve_handling)
+#msg_send_handling_thread.start()
+#msg_recieve_handling_thread.start()
+print("Starting socket server...")
 start()

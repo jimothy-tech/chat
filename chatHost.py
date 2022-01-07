@@ -4,7 +4,7 @@ import time
 
 HEADER = 64
 PORT = 5050
-SERVER = "localhost"
+SERVER = "192.168.0.12"
 ADDR = (SERVER, PORT)
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 FORMAT = 'utf-8'

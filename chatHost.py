@@ -4,12 +4,15 @@ import time
 
 HEADER = 64
 PORT = 5050
-SERVER = "192.168.0.226"
+SERVER = "localhost"
 ADDR = (SERVER, PORT)
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "CyaHoe"
-server.bind(ADDR)
+try:
+    server.bind(ADDR)
+except OSError:
+    pass
 clients = []
 nicknames = []
 
@@ -18,9 +21,11 @@ def handle_client(client, addr):
     connected = True
     client_name = socket.gethostbyaddr(addr[0])[0]  
     while connected:
-        msg = msg_recieve_handling(client)
-        mailman(f"[{nicknames[clients.index(client)]}] {msg}")
-        msg.decode(FORMAT)
+        try:
+            msg = msg_recieve_handling(client).decode(FORMAT)
+        except AttributeError:
+            msg = " "
+        mailman(f"[{nicknames[clients.index(client)]}] {msg}".encode(FORMAT))
         if msg == DISCONNECT_MESSAGE:
             connected = False 
             msg = f"[{nicknames[clients.index(client)]}] {msg}"
@@ -34,8 +39,11 @@ def mailman(mail):
         msg_length = len(mail)
         send_length = str(msg_length).encode(FORMAT)
         send_length += b' ' * (HEADER - len(send_length))
-        client.send(send_length)
-        client.send(mail)
+        try: 
+            client.send(send_length)
+            client.send(mail)
+        except BrokenPipeError:
+            pass
 
 def start():
     server.listen()
@@ -43,7 +51,6 @@ def start():
     while True:
         client, addr = server.accept()
         clients.append(client)
-        time.sleep(1)
         msg_send_handling("What would you like your nickname to be?", client)
         nicknames.append(msg_recieve_handling(client).decode(FORMAT))
         thread = threading.Thread(target=handle_client, args=(client, addr))
@@ -51,10 +58,13 @@ def start():
         print(f"[Active Connections] {threading.activeCount() - 1}")
 
 def msg_send_handling(msg, client):
-    length = msg.encode(FORMAT) + b' ' * (HEADER - len(msg.encode(FORMAT)))
+    length = str(len(msg.encode(FORMAT))).encode(FORMAT) + b' ' * (HEADER - len(msg.encode(FORMAT)))
     client.send(length)
-    client.send(msg.encode(FORMAT))
-
+    time.sleep(1)
+    try:
+        client.send(msg.encode(FORMAT))
+    except ConnectionResetError:
+        pass
 def msg_recieve_handling(client):
     length = int(client.recv(HEADER).decode(FORMAT))
     if length:

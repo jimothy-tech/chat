@@ -11,7 +11,7 @@ SERVER = "192.168.0.12"
 ADDR = (SERVER, PORT)
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 connected = True
-Client_name = socket.gethostbyaddr(SERVER)[0]
+#Client_name = socket.gethostbyaddr(SERVER)[0]
 client.connect(ADDR)
 nickname = ""
 

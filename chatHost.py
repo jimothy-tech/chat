@@ -19,7 +19,7 @@ nicknames = []
 def handle_client(client, addr):
     print(f"[New Connection] {addr}")
     connected = True
-    client_name = socket.gethostbyaddr(addr[0])[0]  
+    #client_name = socket.gethostbyaddr(addr[0])[0]  
     while connected:
         try:
             msg = msg_recieve_handling(client).decode(FORMAT)

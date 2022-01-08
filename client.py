@@ -12,8 +12,9 @@ ADDR = (SERVER, PORT)
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 connected = True
 client.connect(ADDR)
-nickname = ""
+nickname = "" #client's set nickname
 
+#simply a function used to send a message to the server with the same concepts as used in the host file
 def send(msg):
     message = msg.encode(FORMAT)
     msg_length = len(message)
@@ -22,6 +23,8 @@ def send(msg):
     client.send(send_length)
     client.send(message)
 
+#function designed to allow the user to input data that will be used in sending a message to the server
+#also important to note that this function also entails the ability to send a disconnect message
 def inputmsg():
     print("inputmsg running...")
     global connected
@@ -33,6 +36,7 @@ def inputmsg():
             send(DISCONNECT_MESSAGE)
         send(parcel)
 
+#function for recieving messages from the mailman function found in host and then displaying them 
 def display_messages():
     print("display_messages thread running...")
     new_messages = []
@@ -40,10 +44,10 @@ def display_messages():
         message = int(client.recv(HEADER).decode(FORMAT))
         if message:
             msg = client.recv(message).decode(FORMAT)
-            if msg != f"[{nickname}] CyaHoe":
+            if msg != f"[{nickname}] CyaHoe": #makes sure the disconnect message isn't displayed when it is recieved 
                 new_messages.append(msg)
                 print(msg)
-            else:
+            else: #breaks the display message loop when the disconnect message is sent back to the client 
                 print("display_messages thread stopped!")
                 break
         
@@ -58,6 +62,8 @@ def msg_recieve_handling():
     if length:
         return client.recv(length)
 
+#function that queries the user for a nickname to be associated with their socket info
+#sends the nickname back to the server to be stored and used as a nametag for messages
 def choose_nickname():
     global nickname
     nick_question = msg_recieve_handling().decode(FORMAT)

@@ -4,7 +4,7 @@ import time
 
 HEADER = 64 #The set byte size for sending message-length messages 
 PORT = 5050
-SERVER = "192.168.0.12"
+SERVER = "localhost"
 ADDR = (SERVER, PORT)
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 FORMAT = 'utf-8' #format that the messages will be decoded and encoded in
@@ -43,6 +43,7 @@ def mailman(mail):
         send_length += b' ' * (HEADER - len(send_length))
         try: 
             client.send(send_length)
+            time.sleep(1)
             client.send(mail)
         except BrokenPipeError:
             pass
@@ -54,8 +55,11 @@ def start():
         client, addr = server.accept() #When a clients connection is accepted, sets the tuple: client, addr, which are used later in the program 
         #worth noting that client is the socket object responsible for correspondence(sending and recieving messages) between the particular client and the server
         clients.append(client) #appends the socket object, which represents the client, to a list called clients
-        msg_send_handling("What would you like your nickname to be?", client) #sends message to client that is intended for use in determining the clients nickname 
-        nicknames.append(msg_recieve_handling(client).decode(FORMAT)) #recieves and decodes response from the client and appends chosen nickname to list nicknames
+        time.sleep(1)
+        #msg_send_handling("What would you like your nickname to be?", client) #sends message to client that is intended for use in determining the clients nickname 
+        nickname = msg_recieve_handling(client).decode(FORMAT)
+        nicknames.append(nickname) #recieves and decodes response from the client and appends chosen nickname to list nicknames
+        print(f"[Nickname chosen] {nickname}")
         thread = threading.Thread(target=handle_client, args=(client, addr)) #sets a thread object for handling the connecting client
         thread.start()
         print(f"[Active Connections] {threading.activeCount() - 1}")

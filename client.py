@@ -11,6 +11,8 @@ from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
 from kivymd.uix.button import MDFillRoundFlatIconButton
+from kivymd.uix.textfield import MDTextField
+from kivymd.uix.button import MDFlatButton
 sm = ('''
 ScreenManagement:
     id: screen_manager
@@ -68,35 +70,50 @@ ScreenManagement:
 
 class ScreenManagement(ScreenManager):
     def __init__(self, **kwargs):
-        super(NickPage, self).__init__(**kwargs)
+        super(ScreenManagement, self).__init__(**kwargs)
+        self.add_widget(NickPage(name="Nick"))
+        self.add_widget(ChatPage(name="Chat"))
+
 
 
 class NickPage(Screen):
     def __init__(self, **kwargs):
         super(NickPage, self).__init__(**kwargs)
-
-    def submit_button(self):
-        nickname = self.ids["text_field"].text
+        self.nick_text_field = MDTextField(pos_hint={"center_x": .5, "center_y": .5}, 
+        size_hint=(.5, .1), 
+        hint_text="Nickname", 
+        mode="fill",
+        text_color=(0, 0, 1, 1))
+        self.add_widget(self.nick_text_field)
+        self.submit_btn = MDFlatButton(text="Submit",
+        theme_text_color="Custom",
+        pos_hint={"center_y": .5, "right": .9},
+        text_color=(0, 0, 1, 1))
+        self.submit_btn.bind(on_press=self.submit_button)
+        self.add_widget(self.submit_btn)
+    def submit_button(self, instance):
+        nickname = self.nick_text_field.text
         Main.nickname = nickname
         send(nickname)
         self.manager.current = "Chat"
 
 class ChatMessages(ScrollView):
     def __init__(self, **kwargs):
-        super(ChatMessages, self).__init__(**kwargs)
-        #self.layout = GridLayout(cols=1, size_hint_y=.9)
-        #self.add_widget(self.layout)
-        self.chat_history = ["These", "Are", "Tests"]
+        super().__init__(**kwargs)
+        self.layout = GridLayout(cols=1, size_hint_y=.8)
+        self.add_widget(self.layout)
+        self.chat_history = ["These", "Are", "Tests", "These", "Are", "Tests", "These", "Are", "Tests", "These", "Are", "Tests"]
         for every_message in self.chat_history:
-            self.ids.grid.add_widget(MDFillRoundFlatIconButton(text=every_message, size_hint_y=.1))
+            self.layout.add_widget(MDFillRoundFlatIconButton(text=every_message, size_hint_y=.1))
         self.scrollpoint = MDLabel()
         #self.layout.add_widget(self.chat_history)
-        self.ids.grid.add_widget(self.scrollpoint)
+        self.layout.add_widget(self.scrollpoint)
 
     def add_new_message(self, message):
         if message:
             self.chat_history.append(message)
-            self.ids.grid.add_widget(MDFillRoundFlatIconButton(text=message, size_hint_y=.1))
+            self.layout.add_widget(MDFillRoundFlatIconButton(text=message, size_hint_y=.1))
+            print(f"[This is the message that's suppose to be added via add_new_message()] {message}")
 
 
 
@@ -105,13 +122,27 @@ class ChatPage(Screen):
         super(ChatPage, self).__init__(**kwargs)
         messages = ChatMessages()
         self.add_widget(messages)
+        self.chat_inputtext_field = MDTextField(multiline=False,
+        mode="fill",
+        hint_text="Message",
+        icon_right="language-python",
+        size_hint=(.89, .10),
+        pos_hint={"left": 1})
+        self.add_widget(self.chat_inputtext_field)
+        self.send_button = MDFlatButton(text="Send",
+        theme_text_color="Custom",
+        pos_hint={"right": 1},
+        size_hint=(.11, .115),
+        text_color=(0, 0, 1, 1))
+        self.send_button.bind(on_press=self.buttonpress)
+        self.add_widget(self.send_button)
 
-    def buttonpress(self):
+    def buttonpress(self, instance):
         print("button was pressed!")
-        print(self.ids["chat_input"].text)
-        msg = self.ids["chat_input"].text
+        print(self.chat_inputtext_field.text)
+        msg = self.chat_inputtext_field.text
         send(msg)
-        self.ids["chat_input"].text = ""
+        self.chat_inputtext_field.text = ""
 
         #function for recieving messages from the mailman function found in host and then displaying them 
     def display_messages(self):
@@ -157,20 +188,16 @@ class Main(MDApp):
 
     def __init__(self, **kwargs):
         self.title = "JimothyChat"
-        super().__init__(**kwargs)
+        super(Main, self).__init__(**kwargs)
 
     def build(self):
-        self.builder = Builder.load_string(sm)
+        #self.builder = Builder.load_string(sm)
         self.client.connect(self.ADDR)
         thread = threading.Thread(target=ChatPage().display_messages)
         thread.start()
         time.sleep(1)
         self.label = MDLabel(text="This is a test")
-        return self.builder
-
-        
-
-
+        return ScreenManagement()
 
 #simply a function used to send a message to the server with the same concepts as used in the host file
 def send(msg):
@@ -181,10 +208,8 @@ def send(msg):
     Main.client.send(send_length)
     Main.client.send(message)
 
-
-
-
-Main().run()
+if __name__ == '__main__':
+    Main().run()
 
 
 

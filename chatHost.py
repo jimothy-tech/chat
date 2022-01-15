@@ -4,7 +4,7 @@ import time
 
 HEADER = 64 #The set byte size for sending message-length messages 
 PORT = 5050
-SERVER = "192.168.0.12"
+SERVER = "192.168.0.136"
 ADDR = (SERVER, PORT)
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 FORMAT = 'utf-8' #format that the messages will be decoded and encoded in

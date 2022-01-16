@@ -204,7 +204,7 @@ class Main(MDApp):
     PORT = 5050
     FORMAT = 'utf-8'
     DISCONNECT_MESSAGE = "CyaHoe"
-    SERVER = "localhost"
+    SERVER = "93.93.93.121"
     ADDR = (SERVER, PORT)
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     connected = True

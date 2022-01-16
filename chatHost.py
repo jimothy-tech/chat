@@ -27,6 +27,8 @@ def handle_client(client, addr):
             msg = msg_recieve_handling(client).decode(FORMAT)
         except AttributeError:
             msg = " "
+        except ValueError:
+            break
         mailman(f"[{nicknames[clients.index(client)]}] {msg}".encode(FORMAT))
         if msg == DISCONNECT_MESSAGE:    #protocol for when the the disconnect message is recieved by the server
             connected = False 
@@ -46,6 +48,8 @@ def mailman(mail):
             time.sleep(1)
             client.send(mail)
         except BrokenPipeError:
+            pass
+        except ConnectionResetError:
             pass
 #starts the server, listening for incoming connections
 def start():
@@ -69,11 +73,13 @@ def start():
 # it's important to note that this line also adds as many byte-like 
 # blank spaces as are needed to ensure that the length message is 64, the size of our HEADER variable
 def msg_send_handling(msg, client): 
-    length = str(len(msg.encode(FORMAT))).encode(FORMAT) + b' ' * (HEADER - len(msg.encode(FORMAT)))
-    client.send(length) #sends length for use by client in recieving the following message
-    time.sleep(1) #used in case of timing issues in recieving length-of-message and the actual message
     try:
+        length = str(len(msg.encode(FORMAT))).encode(FORMAT) + b' ' * (HEADER - len(msg.encode(FORMAT)))
+        client.send(length) #sends length for use by client in recieving the following message
+        time.sleep(1) #used in case of timing issues in recieving length-of-message and the actual message
         client.send(msg.encode(FORMAT))
+    except BrokenPipeError:
+        pass
     except ConnectionResetError:
         pass
 

@@ -131,14 +131,14 @@ class NickPage(Screen):
         #Main.message_color = 
         self.manager.current = "Chat"
 
-
 class ChatPage(Screen):
     def __init__(self, **kwargs):
         super(ChatPage, self).__init__(**kwargs)
-        scroll_area = ScrollView()
-        self.layout = GridLayout(cols=1, size_hint_y=.8)
-        scroll_area.add_widget(self.layout)
-        self.add_widget(scroll_area)
+        self.scroll_area = ScrollView(do_scroll_y=True, do_scroll_x=False)
+        self.layout = GridLayout(cols=1, size_hint_y=None, size_hint_x=1, spacing=10)
+        self.layout.bind(minimum_height=self.layout.setter('height'))
+        self.scroll_area.add_widget(self.layout)
+        self.add_widget(self.scroll_area)
         self.chat_inputtext_field = MDTextField(multiline=False,
         on_text_validate=self.buttonpress,
         mode="fill",
@@ -154,14 +154,15 @@ class ChatPage(Screen):
         text_color=(0, 0, 1, 1))
         self.send_button.bind(on_press=self.buttonpress)
         self.add_widget(self.send_button)
-        Clock.schedule_interval(self.add_new_message, .5)
+        Clock.schedule_interval(self.add_new_message, 0)
 
     def add_new_message(self, dt):
         message = None
         try:
             message = q.get_nowait()
+            q.task_done()
             self.layout.add_widget(MDFillRoundFlatIconButton(text=message, size_hint_y=.1))
-            print("message was dispatched")
+            print(f"[Message] {message}")
         except:
             pass
 
@@ -204,7 +205,7 @@ class Main(MDApp):
     PORT = 5050
     FORMAT = 'utf-8'
     DISCONNECT_MESSAGE = "CyaHoe"
-    SERVER = "93.93.93.121"
+    SERVER = "192.168.0.136"
     ADDR = (SERVER, PORT)
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     connected = True

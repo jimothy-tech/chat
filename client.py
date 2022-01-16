@@ -13,6 +13,9 @@ from kivy.uix.gridlayout import GridLayout
 from kivymd.uix.button import MDFillRoundFlatIconButton
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.button import MDFlatButton
+from kivy.event import EventDispatcher
+from queue import Queue
+from kivy.clock import Clock
 sm = ('''
 ScreenManagement:
     id: screen_manager
@@ -66,15 +69,21 @@ ScreenManagement:
 '''
 )
 
+class MessageEventDispatcher(EventDispatcher):
+    def __init__(self, **kwargs):
+        self.register_event_type('on_message')
+        super(MessageEventDispatcher, self).__init__(**kwargs)
 
+    def dispatch_message(self, value):
+        self.dispatch('on_message', value)
+
+    def on_message(self, message):
+        pass
 
 class ScreenManagement(ScreenManager):
-    def __init__(self, **kwargs):
-        super(ScreenManagement, self).__init__(**kwargs)
-        self.add_widget(NickPage(name="Nick"))
-        self.add_widget(ChatPage(name="Chat"))
+        pass
 
-
+q = Queue()
 
 class NickPage(Screen):
     def __init__(self, **kwargs):
@@ -105,23 +114,18 @@ class ChatMessages(ScrollView):
         self.chat_history = ["These", "Are", "Tests", "These", "Are", "Tests", "These", "Are", "Tests", "These", "Are", "Tests"]
         for every_message in self.chat_history:
             self.layout.add_widget(MDFillRoundFlatIconButton(text=every_message, size_hint_y=.1))
-        self.scrollpoint = MDLabel()
-        #self.layout.add_widget(self.chat_history)
-        self.layout.add_widget(self.scrollpoint)
-
-    def add_new_message(self, message):
-        if message:
-            self.chat_history.append(message)
-            self.layout.add_widget(MDFillRoundFlatIconButton(text=message, size_hint_y=.1))
-            print(f"[This is the message that's suppose to be added via add_new_message()] {message}")
-
-
+        #self.scrollpoint = MDLabel()
+        #self.layout.add_widget(self.scrollpoint)
 
 class ChatPage(Screen):
     def __init__(self, **kwargs):
         super(ChatPage, self).__init__(**kwargs)
-        messages = ChatMessages()
-        self.add_widget(messages)
+        self.ev = MessageEventDispatcher()
+        self.ev.bind(on_message=self.add_new_message)
+        scroll_area = ScrollView()
+        self.layout = GridLayout(cols=1, size_hint_y=.8)
+        scroll_area.add_widget(self.layout)
+        self.add_widget(scroll_area)
         self.chat_inputtext_field = MDTextField(multiline=False,
         mode="fill",
         hint_text="Message",
@@ -136,6 +140,21 @@ class ChatPage(Screen):
         text_color=(0, 0, 1, 1))
         self.send_button.bind(on_press=self.buttonpress)
         self.add_widget(self.send_button)
+        Clock.schedule_interval(self.dispatch_trigger, .5)
+
+    def dispatch_trigger(self, dt):
+        message = None
+        try:
+            message = q.get_nowait()
+            self.ev.dispatch_message(message)
+            print("message was dispatched")
+        except:
+            pass
+
+    def add_new_message(self, value, message):
+        self.layout.add_widget(MDFillRoundFlatIconButton(text=message, size_hint_y=.1))
+        #print(f"[This is the message that's suppose to be added via add_new_message()] {message}")
+        print('Message should have been displayed as' + message)
 
     def buttonpress(self, instance):
         print("button was pressed!")
@@ -143,7 +162,6 @@ class ChatPage(Screen):
         msg = self.chat_inputtext_field.text
         send(msg)
         self.chat_inputtext_field.text = ""
-
         #function for recieving messages from the mailman function found in host and then displaying them 
     def display_messages(self):
         print("display_messages thread running...")
@@ -154,7 +172,7 @@ class ChatPage(Screen):
                 print(Main.nickname)
                 print(f"[Display message] {msg}")
                 if msg != f"[{Main.nickname}] CyaHoe": #makes sure the disconnect message isn't displayed when it is recieved 
-                    ChatMessages().add_new_message(msg)
+                    q.put(msg)
                     #print(f"[self.label.text] {self.label.text}")
                     if msg == "What would you like your nickname to be?":
                         Main.nickname = Main.client.recv(message_length).decode(Main.FORMAT)
@@ -187,17 +205,18 @@ class Main(MDApp):
     mail = ""
 
     def __init__(self, **kwargs):
-        self.title = "JimothyChat"
+        self.title = "JChat"
         super(Main, self).__init__(**kwargs)
 
     def build(self):
         #self.builder = Builder.load_string(sm)
+        sm = ScreenManagement()
+        sm.add_widget(NickPage(name="Nick"))
+        sm.add_widget(ChatPage(name="Chat"))
         self.client.connect(self.ADDR)
         thread = threading.Thread(target=ChatPage().display_messages)
         thread.start()
-        time.sleep(1)
-        self.label = MDLabel(text="This is a test")
-        return ScreenManagement()
+        return sm
 
 #simply a function used to send a message to the server with the same concepts as used in the host file
 def send(msg):

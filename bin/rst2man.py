@@ -1,4 +1,4 @@
-#!/home/tim/Documents/projects/chatui/bin/python
+#!/home/tim/Documents/projects/jchat/bin/python
 
 # Author:
 # Contact: grubert@users.sf.net

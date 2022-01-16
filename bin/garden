@@ -1,4 +1,4 @@
-#!/home/tim/Documents/projects/chatui/bin/python
+#!/home/tim/Documents/projects/jchat/bin/python
 
 import sys
 import argparse

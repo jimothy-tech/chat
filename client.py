@@ -10,6 +10,7 @@ from kivy.uix.label import Label
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
+from kivy.uix.anchorlayout import AnchorLayout
 from kivymd.uix.button import MDFillRoundFlatIconButton
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.button import MDFlatButton
@@ -20,59 +21,9 @@ from kivy.core.window import Window
 import random
 from kivy.graphics import Color
 from kivy.uix.widget import Widget
-sm = ('''
-ScreenManagement:
-    id: screen_manager
-    NickPage:
-        name: "Nick"
-        id: nick
-        manager: screen_manager
-    ChatPage:
-        name: "Chat"
-        id: chat
-        manager: screen_manager
-<NickPage>
-    MDTextField:
-        id: text_field
-        multiline: False
-        mode: "fill"
-        hint_text: "Nickname"
-        valign: "center"
-        halign: "center"
-        pos_hint: {"center_x": .5, "center_y": .5}
-        size_hint: (.5, .1)
-    MDFlatButton:
-        text: "Submit"
-        theme_text_color: "Custom"
-        text_color: 0, 0, 1, 1
-        pos_hint: {"center_y": .5, "right": .9}
-        on_press: root.submit_button()
-<ChatMessages>
-    GridLayout:
-        id: grid
-        size_hint_y: .9
-        cols: 1
-<ChatPage>
-    MDTextField:
-        id: chat_input
-        multiline: False
-        mode: "fill"
-        hint_text: "Message"
-        icon_right: "language-python"
-        icon_right_color_focus: 0, 1, 0, 1
-        size_hint: (.89, .10)
-        pos_hint: {"left": 1}
-    MDFlatButton:
-        text: "Send"
-        theme_text_color: "Custom"
-        text_color: 0, 0, 1, 1
-        pos_hint: {"right": 1}
-        size_hint: (.11, .115)
-        on_press: root.buttonpress()
-    
-'''
-)
+from kivy.uix.boxlayout import BoxLayout
 
+##For reference:
 #class MessageEventDispatcher(EventDispatcher):
     #def __init__(self, **kwargs):
         #self.register_event_type('on_message')
@@ -128,44 +79,68 @@ class NickPage(Screen):
         nickname = self.nick_text_field.text
         Main.nickname = nickname
         send(nickname)
-        #Main.message_color = 
         self.manager.current = "Chat"
 
-class ChatPage(Screen):
+class MessageScrollArea(Widget):
     def __init__(self, **kwargs):
-        super(ChatPage, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.scroll_area = ScrollView(do_scroll_y=True, do_scroll_x=False)
         self.layout = GridLayout(cols=1, size_hint_y=None, size_hint_x=1, spacing=10)
         self.layout.bind(minimum_height=self.layout.setter('height'))
         self.scroll_area.add_widget(self.layout)
         self.add_widget(self.scroll_area)
+
+class ChatPage(Screen):
+    def __init__(self, **kwargs):
+        super(ChatPage, self).__init__(**kwargs)
+        self.scroll_area = ScrollView(do_scroll_y=True, do_scroll_x=False)
+        self.layout1 = BoxLayout(orientation="vertical", size_hint_y=None, size_hint_x=1, spacing=10)
+        self.layout1.bind(minimum_height=self.layout1.setter('height'))
+        self.scroll_area.add_widget(self.layout1)
+        #MAIN LAYOUT
+        self.layout2 = GridLayout(cols=1, rows=2, size_hint=(1, 1), rows_minimum={0: Window.height * .9, 1: Window.height * .1})
+        self.layout2.add_widget(self.scroll_area)
+        self.text_and_send_area = GridLayout(cols=2, spacing=10, cols_minimum={0: Window.width*.8})
+        self.anchor_button = AnchorLayout(size_hint=(1, 1))
+        self.anchor_text_input = AnchorLayout(size_hint=(1, 1))
         self.chat_inputtext_field = MDTextField(multiline=False,
-        on_text_validate=self.buttonpress,
         mode="fill",
+        on_text_validate=self.buttonpress,
         hint_text="Message",
-        icon_right="language-python",
-        size_hint=(.89, .10),
-        pos_hint={"left": 1})
-        self.add_widget(self.chat_inputtext_field)
+        icon_right="language-python")
         self.send_button = MDFlatButton(text="Send",
+        height=100,
+        width=100,
         theme_text_color="Custom",
-        pos_hint={"right": 1},
-        size_hint=(.11, .115),
         text_color=(0, 0, 1, 1))
         self.send_button.bind(on_press=self.buttonpress)
-        self.add_widget(self.send_button)
+        self.anchor_text_input.add_widget(self.chat_inputtext_field)
+        self.anchor_button.add_widget(self.send_button)
+        self.text_and_send_area.add_widget(self.anchor_text_input)
+        self.text_and_send_area.add_widget(self.anchor_button)
+        self.layout2.add_widget(self.text_and_send_area)
+        self.add_widget(self.layout2)
+        Window.bind(on_resize=self.resize_layout)
         Clock.schedule_interval(self.add_new_message, 0)
+
+    def resize_layout(self, width, height, *args):
+        self.text_and_send_area.cols_minimum = {0: Window.width * .8}
+        self.layout2.rows_minimum = {0: Window.height * .9, 1: Window.height * .1}
 
     def add_new_message(self, dt):
         message = None
         try:
             message = q.get_nowait()
+            extract_nickname = (message.split("]")[0]).split("[")[1]
+            if extract_nickname == Main.nickname:
+                pos = {"left": 1}
+            else: pos = {"right": 1}
             q.task_done()
-            self.layout.add_widget(MDFillRoundFlatIconButton(text=message, size_hint_y=.1))
+            self.layout1.add_widget(MDFillRoundFlatIconButton(md_bg_color=Main.chat_color, text=message, size_hint_y=.1, pos_hint=pos))
             print(f"[Message] {message}")
         except:
             pass
-
+    
     def buttonpress(self, instance):
         print("button was pressed!")
         print(self.chat_inputtext_field.text)
@@ -183,21 +158,15 @@ class ChatPage(Screen):
                 print(Main.nickname)
                 print(f"[Display message] {msg}")
                 if msg != f"[{Main.nickname}] CyaHoe": #makes sure the disconnect message isn't displayed when it is recieved 
+                    Main.chat_color = (msg.split(" #")[0]).split(" ")
+                    print(f"[Main.chat_color] {Main.chat_color}")
+                    print(msg.split(" #"))
+                    msg = (msg.split(" #")[1])
+                    print(f"[Message after split] {msg}")
                     q.put(msg)
                 else: #breaks the display message loop when the disconnect message is sent back to the self.client 
                     print("display_messages thread stopped!")
                     break
-        
-    def msg_send_handling(msg, self):
-        length = str(len(msg.encode(self.FORMAT))).encode(self.FORMAT) + b' ' * (self.HEADER - len(msg.encode(self.FORMAT)))
-        self.client.send(length)
-        time.sleep(1)
-        self.client.send(msg.encode(self.FORMAT))
-
-    def msg_recieve_handling(self):
-        length = int(self.client.recv(self.HEADER).decode(self.FORMAT))
-        if length:
-            return self.client.recv(length)
 
 
 class Main(MDApp):
@@ -211,6 +180,7 @@ class Main(MDApp):
     connected = True
     nickname = "" #client's set nickname
     mail = ""
+    chat_color = []
 
     def __init__(self, **kwargs):
         self.title = "JChat"
@@ -218,6 +188,7 @@ class Main(MDApp):
 
     def build(self):
         #self.builder = Builder.load_string(sm)
+        Clock.max_iteration = 1000
         Window.clearcolor = (1, 0, 0, 1)
         sm = ScreenManagement()
         sm.add_widget(NickPage(name="Nick"))
@@ -225,9 +196,21 @@ class Main(MDApp):
         self.client.connect(self.ADDR)
         Window.bind(on_request_close=self.close_window)
         return sm
-
+        
+            
     def close_window(self, value):
         send(self.DISCONNECT_MESSAGE)
+
+    def msg_send_handling(msg, self):
+        length = str(len(msg.encode(self.FORMAT))).encode(self.FORMAT) + b' ' * (self.HEADER - len(msg.encode(self.FORMAT)))
+        self.client.send(length)
+        time.sleep(1)
+        self.client.send(msg.encode(self.FORMAT))
+
+    def msg_recieve_handling(self):
+        length = int(self.client.recv(self.HEADER).decode(self.FORMAT))
+        if length:
+            return self.client.recv(length)
 
 #simply a function used to send a message to the server with the same concepts as used in the host file
 def send(msg):

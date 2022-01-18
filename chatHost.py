@@ -1,6 +1,7 @@
 import socket 
 import threading
 import time
+import random
 
 HEADER = 64 #The set byte size for sending message-length messages 
 PORT = 5050
@@ -15,13 +16,18 @@ except OSError:
     pass
 clients = [] #list of clients that have connected 
 nicknames = [] #list of corresponding nicknames
+chat_colors = []
 
 #start() function creates a thread for each new connection that targets this function
 #which is responsible for handling the clients messages and decisions
 def handle_client(client, addr):
     print(f"[New Connection] {addr}")
     connected = True
-    #client_name = socket.gethostbyaddr(addr[0])[0]  
+    color = ""
+    for colorvalue in range(4):
+        color += str((round(random.uniform(0.0, 1.0), 2))) + " "
+    chat_colors.append(color)
+    print(color)
     while connected:
         try:
             msg = msg_recieve_handling(client).decode(FORMAT)
@@ -29,7 +35,7 @@ def handle_client(client, addr):
             msg = " "
         except ValueError:
             break
-        mailman(f"[{nicknames[clients.index(client)]}] {msg}".encode(FORMAT))
+        mailman(f"{chat_colors[clients.index(client)]}#[{nicknames[clients.index(client)]}] {msg}".encode(FORMAT))
         if msg == DISCONNECT_MESSAGE:    #protocol for when the the disconnect message is recieved by the server
             connected = False 
             msg = f"[{nicknames[clients.index(client)]}] {msg}"
@@ -92,6 +98,7 @@ def msg_recieve_handling(client):
     length = int(client.recv(HEADER).decode(FORMAT))
     if length:
         return client.recv(length)
+
 
 print("Starting socket server...")
 start()
